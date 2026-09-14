@@ -3,7 +3,7 @@ name: Short Options Scanner
 on:
   schedule:
     # GitHub Actions cron is UTC. 16:00 UTC = 8:00 AM PST.
-    - cron: "0 16 * * 1-5"
+    - cron: "0 15 * * 1-5"
   workflow_dispatch:
 
 jobs:
