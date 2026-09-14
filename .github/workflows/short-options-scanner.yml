@@ -2,9 +2,8 @@ name: Short Options Scanner
 
 on:
   schedule:
-    # GitHub Actions cron is UTC. 20:00 UTC is 12:00 PM Pacific Standard Time.
-    # During daylight saving time, this runs at 1:00 PM Pacific Daylight Time.
-    - cron: "0 20 * * 1-5"
+    # GitHub Actions cron is UTC. 16:00 UTC = 8:00 AM PST.
+    - cron: "0 16 * * 1-5"
   workflow_dispatch:
 
 jobs:
