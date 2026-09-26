@@ -1,4 +1,3 @@
-"""Option snapshot normalization, filtering, and transparent screening scores."""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -46,20 +45,31 @@ def evaluate_contracts(frame: pd.DataFrame, expected_rv: float, earnings_by_cont
     for _, source in frame.iterrows():
         row = source.to_dict(); symbol = str(row.get("contract_symbol"))
         def reject(reason: str) -> None: rejected.append(_reject(row, reason))
+        
         if row.get("option_type") not in (option_type, option_type[0]): reject(f"REJECTED: option type is not {option_type}."); continue
+        
         if not (min_dte <= row.get("dte", -1) <= max_dte): reject("REJECTED: option is outside configured DTE."); continue
         bid, ask, strike, spot, iv, delta = (row.get(k) for k in ("bid", "ask", "strike", "spot_price", "implied_volatility", "delta"))
+        
         if bid is None or ask is None or bid < min_bid or ask <= 0 or ask < bid: reject("REJECTED: missing/invalid bid-ask quote or bid below minimum."); continue
+        
         if row.get("bid_ask_spread_pct") is None or row["bid_ask_spread_pct"] > max_spread: reject("REJECTED: bid-ask spread is too wide."); continue
+        
         if any(value is None for value in (strike, spot, iv, delta)) or strike <= 0 or spot <= 0: reject("REJECTED: invalid strike, spot, IV, or delta."); continue
+        
         if iv <= 0 or iv > 10: reject("REJECTED: IV is missing, nonpositive, or unreasonable."); continue
+        
         if not (min_delta <= delta <= max_delta): reject(f"REJECTED: delta {delta:.3f} is outside [{min_delta:.2f}, {max_delta:.2f}]."); continue
+        
         if (option_type == "put" and strike >= spot) or (option_type == "call" and strike <= spot): reject("REJECTED: strike is not out-of-the-money."); continue
         event = earnings_by_contract.get(symbol, {})
+        
         if not event.get("safe"): reject(event.get("reason", "REJECTED: earnings filter failed.")); continue
         expected_move = spot * expected_rv * sqrt(row["dte"] / 252)
+        
         if expected_move <= 0: reject("REJECTED: expected move is invalid."); continue
         row.update({"current_stock_price": spot, "current_stock_price_source": "yfinance adjusted close", "option_price": bid, "option_price_basis": "bid used as the assumed short-sale credit", "iv_rv_ratio": iv / expected_rv, "iv_minus_rv": iv - expected_rv, "expected_move_dollars": expected_move, "distance_from_expected_move": ((spot - strike) if option_type == "put" else (strike - spot)) / expected_move, "premium_per_share": bid, "premium_per_contract": bid * 100, "earnings_date": event.get("earnings_date"), "days_until_earnings": event.get("days_until_earnings")})
+        
         if option_type == "put":
             row.update({"required_cash_collateral": strike * 100, "effective_purchase_price": strike - bid, "put_distance_from_spot_pct": (spot - strike) / spot, "collateral_yield": bid / strike, "simple_annualized_collateral_yield": (bid / strike) * 365 / row["dte"]})
             premium_yield = row["collateral_yield"]
@@ -69,6 +79,7 @@ def evaluate_contracts(frame: pd.DataFrame, expected_rv: float, earnings_by_cont
         row["delta_distance"] = abs(delta - target_delta)
         row["_premium_yield"] = premium_yield
         candidates.append(row)
+
     if candidates:
         result = pd.DataFrame(candidates)
         def norm(column: str) -> pd.Series:

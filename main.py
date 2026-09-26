@@ -1,4 +1,3 @@
-"""Run the configured live scan and persist results."""
 from __future__ import annotations
 
 from datetime import datetime

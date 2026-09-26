@@ -1,4 +1,3 @@
-"""Earnings-event retrieval and conservative safety filtering."""
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -11,9 +10,6 @@ import requests
 LOGGER = logging.getLogger(__name__)
 _CACHE: dict[tuple[str, str, str, str], dict[str, Any]] = {}
 
-# TODO: add ex-dividend filtering for covered calls; early assignment risk matters.
-# TODO: add splits/reverse splits, mergers/tender offers, FDA events for biotech,
-# analyst days, investor days, and guidance events.
 
 def get_next_earnings_date(symbol: str, start_date: date, end_date: date, fmp_api_key: str) -> dict[str, Any]:
     key = (symbol.upper(), start_date.isoformat(), end_date.isoformat(), fmp_api_key)
@@ -49,8 +45,11 @@ def is_earnings_safe(today: date, expiration: date, earnings_date: date | None, 
     if earnings_date is None:
         return {"earnings_date": None, "earnings_time": None, "days_until_earnings": None, "safe": False, "reason": "REJECTED: earnings date is unverified."}
     days = (earnings_date - today).days
+    
     if earnings_date <= expiration:
         return {"earnings_date": earnings_date.isoformat(), "days_until_earnings": days, "safe": False, "reason": f"REJECTED: Earnings on {earnings_date} is before/on expiration {expiration}."}
+    
     if days <= earnings_buffer_days:
         return {"earnings_date": earnings_date.isoformat(), "days_until_earnings": days, "safe": False, "reason": f"REJECTED: Earnings is only {days} days away; required buffer is {earnings_buffer_days} days."}
+    
     return {"earnings_date": earnings_date.isoformat(), "days_until_earnings": days, "safe": True, "reason": "PASS: earnings is outside the exclusion window."}

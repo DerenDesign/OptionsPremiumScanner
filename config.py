@@ -1,5 +1,3 @@
-"""User-editable settings for the short-options research scanner."""
-
 TICKERS = [
     "AAPL", "MSFT", "NVDA", "GOOGL", "GOOG", "AMZN", "META", "TSLA", "AMD", "MU", "NOW","QQQ", "SPY",
 ]

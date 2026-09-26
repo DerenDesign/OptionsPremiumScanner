@@ -1,4 +1,3 @@
-"""Deterministic report data, Gemini formatting, and Resend delivery."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -9,7 +8,7 @@ import pandas as pd
 
 import config
 
-DISCLAIMER = "Research screening only; not financial advice or an instruction to trade. Quotes may be delayed. Historical volatility does not predict earnings gaps, news, jumps, or tail risk."
+DISCLAIMER = "Research screening only -- not financial advice or an instruction to trade."
 
 def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
     if frame.empty: return []

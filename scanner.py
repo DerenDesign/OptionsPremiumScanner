@@ -1,4 +1,3 @@
-"""Orchestration for a research-only short-options scan."""
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -13,17 +12,11 @@ from options_analysis import evaluate_contracts, normalize_snapshots
 from volatility import calculate_from_symbol
 
 LOGGER = logging.getLogger(__name__)
-WARNINGS = [
-    "Delayed Alpaca data may not match current executable quotes.",
-    "Use current broker quotes before placing an order.",
-    "This scanner does not model earnings, news jumps, dividends, early assignment, taxes, or portfolio concentration.",
-    "A cash-secured put may result in assignment of 100 shares.",
-    "A covered call caps upside above the strike while retaining stock downside.",
-]
+
 
 
 def _occ_details(contract_symbol: str) -> dict[str, Any]:
-    """Parse standard OCC symbols such as AAPL260918P00100000."""
+    "Parse standard OCC  symbols"
     text = str(contract_symbol).strip()
     if len(text) < 15:
         return {}
@@ -38,7 +31,6 @@ def _occ_details(contract_symbol: str) -> dict[str, Any]:
 
 
 def get_alpaca_option_snapshots(symbol: str, api_key: str, api_secret: str) -> list[dict[str, Any]]:
-    """Fetch snapshots through alpaca-py; this adapter is the only SDK-specific surface."""
     if not api_key or not api_secret:
         raise RuntimeError("ALPACA_API_KEY and ALPACA_API_SECRET are required")
     try:
@@ -84,7 +76,7 @@ def _empty_frame() -> pd.DataFrame:
 
 
 def scan_tickers(tickers: list[str], min_dte: int, max_dte: int, scan_puts: bool = True, scan_calls: bool = True) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Return best put per ticker, best call per ticker, and all useful rejections."""
+
     today = date.today()
     all_puts: list[pd.DataFrame] = []; all_calls: list[pd.DataFrame]; all_calls = []
     rejections: list[dict[str, Any]] = []
@@ -105,13 +97,16 @@ def scan_tickers(tickers: list[str], min_dte: int, max_dte: int, scan_puts: bool
                     except ValueError: continue
                     event_map[str(contract.contract_symbol)] = _event_for_contract(event, today, expiration)
                 good, bad = evaluate_contracts(frame, vol.expected_rv, event_map, min_dte=min_dte, max_dte=max_dte, option_type=option_type, target_delta=target, min_delta=lower, max_delta=upper, max_spread=config.MAX_BID_ASK_SPREAD_PCT, min_bid=config.MIN_OPTION_BID)
-                if not good.empty: destination.append(good.assign(rv_5=vol.rv_5, rv_20=vol.rv_20, rv_60=vol.rv_60, expected_rv=vol.expected_rv, warnings=" | ".join(WARNINGS)))
+                if not good.empty: destination.append(good.assign(rv_5=vol.rv_5, rv_20=vol.rv_20, rv_60=vol.rv_60, expected_rv=vol.expected_rv))
                 if not bad.empty: rejections.extend(bad.assign(ticker=ticker, rejection_type="contract").to_dict("records"))
         except Exception as exc:
             LOGGER.warning("Skipping %s: %s", ticker, exc)
             rejections.append({"ticker": ticker, "rejection_type": "symbol", "verdict": "REJECTED", "rejection_reason": str(exc)})
+    
     puts = pd.concat(all_puts, ignore_index=True) if all_puts else _empty_frame()
     calls = pd.concat(all_calls, ignore_index=True) if all_calls else _empty_frame()
+    
     if not puts.empty: puts = puts.sort_values("score", ascending=False).groupby("ticker", as_index=False).head(1).sort_values("score", ascending=False)
     if not calls.empty: calls = calls.sort_values("score", ascending=False).groupby("ticker", as_index=False).head(1).sort_values("score", ascending=False)
+    
     return puts.reset_index(drop=True), calls.reset_index(drop=True), pd.DataFrame(rejections)

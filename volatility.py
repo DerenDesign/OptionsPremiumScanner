@@ -1,4 +1,3 @@
-"""Historical prices and realized-volatility calculations."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -25,7 +24,7 @@ class VolatilityResult:
 
 
 def get_adjusted_close_history(symbol: str, period: str = "180d") -> pd.Series:
-    """Download daily adjusted closes. yfinance is intentionally not used for options."""
+    
     try:
         import yfinance as yf
     except ImportError as exc:
@@ -46,6 +45,7 @@ def get_adjusted_close_history(symbol: str, period: str = "180d") -> pd.Series:
 
 
 def _annualized_volatility(returns: pd.Series, length: int) -> float:
+
     window = returns.dropna().tail(length)
     if len(window) < length:
         raise ValueError(f"Need at least {length} valid daily returns; got {len(window)}")
@@ -56,7 +56,7 @@ def _annualized_volatility(returns: pd.Series, length: int) -> float:
 
 
 def calculate_volatility(closes: pd.Series, weights: tuple[float, float, float] = (0.20, 0.50, 0.30), dtes: Iterable[int] = range(1, 8)) -> VolatilityResult:
-    """Calculate RV5/RV20/RV60 and DTE-specific one-standard-deviation moves."""
+
     prices = pd.to_numeric(closes, errors="coerce").dropna()
     if prices.empty or (prices <= 0).any():
         raise ValueError("Historical prices must contain positive values")
